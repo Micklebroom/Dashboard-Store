@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Business Scanner Dashboard</title>
+    <link href="https://googleapis.com" rel="stylesheet">
+    <link rel="stylesheet" href="https://cloudflare.com">
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            padding: 30px 40px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(45deg, #ffffff, #e2e8f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            font-weight: 400;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .chart-card {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 30px -5px rgba(0, 0, 0, 0.4);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title i {
+            color: #3b82f6;
+        }
+
+        .card-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .card-status {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #10b981;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>AI Business Scanner Dashboard</h1>
+        <p>Система интеллектуального анализа бизнес-показателей активирована</p>
+    </div>
+    
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-title"><i class="fas fa-cpu"></i> Статус ИИ-модели</div>
+            <div id="ai-status" class="card-value" style="color: #10b981;">Загрузка...</div>
+            <div id="ai-sub" class="card-status"><i class="fas fa-sync-alt fa-spin"></i> Синхронизация...</div>
+        </div>
+        
+        <div class="dashboard-card">
+            <div class="card-title"><i class="fas fa-barcode"></i> Сканировано объектов</div>
+            <div id="scanned-count" class="card-value">0</div>
+            <div id="scanned-sub" class="card-status" style="color: #3b82f6;"><i class="fas fa-arrow-up"></i> Обновление...</div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-title"><i class="fas fa-chart-pie"></i> Точность распознавания</div>
+            <div id="accuracy-value" class="card-value">0%</div>
+            <div id="accuracy-sub" class="card-status"><i class="fas fa-bolt"></i> Калибровка...</div>
+        </div>
+
+        <div class="chart-card">
+            <div class="card-title"><i class="fas fa-chart-area"></i> Динамика сканирования по часам</div>
+            <div class="chart-container">
+                <canvas id="hourlyChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ВСТАВЬТЕ СЮДА ВАШ URL ИЗ N8N PRODUCTION WEBHOOK МЕЖДУ ОДИНАРНЫМИ КАВЫЧКАМИ
+    const API_URL = 'ВСТАВЬТЕ_СЮДА_ВАШУ_ССЫЛКУ_ИЗ_N8N'; 
+
+    let hourlyChart = null;
+
+    function initChart() {
+        const ctx = document.getElementById('hourlyChart').getContext('2d');
+        hourlyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Сканирований в час',
+                    data: [],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#3b82f6',
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } },
+                    y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    async function updateDashboard() {
+        try {
+            const response = await fetch(API_URL);
+            if (!response.ok) throw new Error('Ошибка ответа сервера');
+            
+            const data = await response.json();
+
+            document.getElementById('ai-status').textContent = data.main.ai_status || 'Активен';
+            document.getElementById('ai-status').style.color = data.main.ai_status === 'Ошибка' ? '#ef4444' : '#10b981';
+            document.getElementById('scanned-count').textContent = Number(data.main.scanned_count).toLocaleString();
+            document.getElementById('accuracy-value').textContent = data.main.accuracy + '%';
+            
+            if (data.main.ai_sub) document.getElementById('ai-sub').innerHTML = data.main.ai_sub;
+            if (data.main.scanned_sub) document.getElementById('scanned-sub').innerHTML = data.main.scanned_sub;
+            if (data.main.accuracy_sub) document.getElementById('accuracy-sub').innerHTML = data.main.accuracy_sub;
+            
+            if (data.hourly && data.hourly.labels && data.hourly.values) {
+                hourlyChart.data.labels = data.hourly.labels;
+                hourlyChart.data.datasets[0].data = data.hourly.values; // ПОЛНОСТЬЮ ИСПРАВЛЕНО
+                hourlyChart.update();
+            }
+            
+        } catch (error) {
+            console.error('Не удалось получить данные:', error);
+            document.getElementById('ai-status').textContent = 'Офлайн';
+            document.getElementById('ai-status').style.color = '#94a3b8';
+            document.getElementById('ai-sub').innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #f59e0b"></i> Нет связи с n8n';
+        }
+    }
+
+    initChart();
+    updateDashboard();
+    setInterval(updateDashboard, 5000);
+</script>
+
+</body>
+</html>
